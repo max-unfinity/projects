@@ -30,7 +30,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     && rm -rf /var/lib/apt/lists/*
 
 # Project-writable venv at /opt/venv — base deps go here, projects extend it
-RUN python3.10 -m venv /opt/venv
+RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:${PATH}"
 
 # Torch — pip cache mount keeps the wheel cache outside the image

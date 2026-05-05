@@ -28,9 +28,15 @@ The skill assumes the current working directory is the parent "projects" directo
 
 Reference: `./examples/base-image-example.Dockerfile` — read it on demand whenever the task touches a base image.
 
-### Required dev packages / libs
+### Additional user packages/libs
 
-Reference: `./include.md` — the canonical list of extra packages, CLIs, and libraries that must be installed inside every project Dockerfile. Read it during step 3.
+The list of extra packages that must be installed inside every project Dockerfile.
+
+!`cat ./include.md`
+
+### Non-Python stacks
+
+Reference: `./.claude/skills/setup-project/stacks.md` — toolchain layout (chown target, cache mount path, PATH line) for npm / yarn / pnpm bases. Read on demand when setting up a non-Python project.
 
 ---
 
@@ -44,13 +50,13 @@ Clone into `./{repo_name}/` (relative to CWD). Use the URL's final path segment 
 
 ### 2 — Select base image
 
-Base images follow the naming convention shown above (e.g. `cu12.4-torch2.5-base`). The local tag is always `{base_name}:dev`.
+Base images follow the naming convention shown above (e.g. `cu12.8-torch2.7-base.Dockerfile`). Treat `{base_name}` as the filename without `.Dockerfile` (e.g. `cu12.8-torch2.7-base`); the local tag is always `{base_name}:dev`.
 
 **Prefer an existing image.** Compatibility rules:
 - Accelerator libs (CUDA, ROCm, etc.) are forward-compatible within a major version.
 - Framework versions (torch, jax, tf) are generally forward-compatible; only reject if the project hard-requires an older major version.
 
-**Create a new base only as a last resort** — model it on the Example base-image Dockerfile reference (or the closest existing one), adjust versions, keep the naming convention, and explain why no existing image fit. New base Dockerfiles live in CWD as `./{name}-base.Dockerfile`.
+**Create a new base only as a last resort** — model it on the Example base-image Dockerfile reference (or the closest existing one), adjust versions, keep the naming convention, and explain why no existing image fit. New base Dockerfiles live in CWD as `./{base_name}.Dockerfile`.
 
 Check if the chosen image is built (`docker image ls | grep {base_name}`); build it from CWD if not. The base has no user concept — it's a pure tooling layer — so no UID/GID build args are needed.
 
@@ -58,7 +64,7 @@ Check if the chosen image is built (`docker image ls | grep {base_name}`); build
 
 Create `./{repo_name}/Dockerfile` modelled on the example project Dockerfile above.
 
-Before writing, read `./include.md` and ensure every package/CLI/library listed there is installed in the project Dockerfile (in addition to whatever the project itself needs). Use the appropriate install path: `apt`/`apt-get` for system libs, the language manager for CLI tools (e.g. `pip install`, `npm i -g`), and the documented installer for anything else. If something in `include.md` is already provided by the chosen base image, skip it.
+Ensure every package/CLI/library from the "Additional user packages/libs" list above is installed in the project Dockerfile (in addition to whatever the project itself needs). Skip anything already provided by the chosen base image.
 
 Key practices (non-obvious ones):
 - **Use the shared `setup-devuser.sh` helper.** All devuser/sudo-wrapper/venv-chown logic lives in `./setup-devuser.sh`. The project Dockerfile pulls it and invokes (see example project Dockerfile above).
@@ -81,37 +87,10 @@ Copy most of the fields from the example docker-compose above (no `extends`). Ad
 - **`entrypoint`**: `["tail", "-f", "/dev/null"]` — keep this dev default
 - everything else as needed based on the project.
 
-### 6 — Report
+### 6 — Run
 
-Tell the user:
-1. Which base image was chosen and why (or why a new one was created).
-2. Notable compatibility decisions.
-3. Start command: `docker compose -f ./{repo_name}/docker-compose.yml up -d`
+Start the container with docker compose.
 
----
+### 7 — Report
 
-## Adapting to non-Python stacks
-
-The pattern generalises: the **base** installs the toolchain at a system path (so it survives home-dir mounts) and puts that path on `PATH`; the **project** creates devuser, installs the sudo wrappers, and `chown`s the toolchain root so devuser can write to it.
-
-When creating a new base for a different stack (Node, Rust, Go, …), copy the closest existing base and swap **only** the toolchain install + the `PATH` line. The devuser/sudo-wrapper block stays in the project Dockerfile (identical across stacks) — only the `chown` target changes.
-
-**pip**
-- Base toolchain root: venv at `/opt/venv` (already on `PATH`).
-- Project chowns: `/opt/venv`.
-- Cache mount target: `/home/devuser/.cache/pip`.
-
-**npm**
-- Base toolchain root: `/opt/npm-global`, set via `npm config set prefix /opt/npm-global -g`; add `/opt/npm-global/bin` to `PATH`.
-- Project chowns: `/opt/npm-global`.
-- Cache mount target: `/home/devuser/.npm`.
-
-**yarn**
-- Base toolchain root: `/opt/yarn-global`, set via `yarn config set prefix /opt/yarn-global`; add `/opt/yarn-global/bin` to `PATH`.
-- Project chowns: `/opt/yarn-global`.
-- Cache mount target: `/home/devuser/.cache/yarn` (v1) or `/home/devuser/.yarn/berry/cache` (v2+).
-
-**pnpm**
-- Base toolchain root: `/opt/pnpm-global`, set via `pnpm config set global-bin-dir /opt/pnpm-global/bin`; add `/opt/pnpm-global/bin` to `PATH`.
-- Project chowns: `/opt/pnpm-global`.
-- Cache mount target: `/home/devuser/.local/share/pnpm/store`.
+Briefly summarise your work and report any issues you encountered. If you had to create a new base image, explain why.

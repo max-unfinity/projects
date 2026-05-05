@@ -5,11 +5,11 @@
 #
 # Usage: setup-devuser.sh <UID> <GID>
 set -eu
-UID="${1:-1008}"
-GID="${2:-1008}"
+DEV_UID="${1:-1008}"
+DEV_GID="${2:-1008}"
 
-groupadd -g "$GID" devuser
-useradd -m -u "$UID" -g "$GID" -s /bin/bash devuser
+groupadd -g "$DEV_GID" devuser
+useradd -m -u "$DEV_UID" -g "$DEV_GID" -s /bin/bash devuser
 echo "devuser ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/devuser
 chmod 0440 /etc/sudoers.d/devuser
 
@@ -22,5 +22,5 @@ done
 # for non-Python bases that don't ship /opt/venv — they should chown their own
 # toolchain root after invoking this script.
 if [ -d /opt/venv ]; then
-  chown -R "$UID:$GID" /opt/venv
+  chown -R "$DEV_UID:$DEV_GID" /opt/venv
 fi
