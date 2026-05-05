@@ -1,17 +1,15 @@
 FROM {base}:dev
 
-# UID/GID come from compose build.args; needed so the cache mount is owned by devuser
+# Come from compose build.args, matched to the host user
 ARG UID=1008
 ARG GID=1008
 
-WORKDIR /home/devuser/{project-repo}
+# Devuser, sudo wrappers, and venv ownership all set up by the shared script.
+# `helpers` is the additional build context wired in docker-compose.yml.
+COPY --from=helpers setup-devuser.sh /tmp/
+RUN /tmp/setup-devuser.sh ${UID} ${GID} && rm /tmp/setup-devuser.sh
 
-# System deps — `apt-get` is wrapped to auto-sudo, so no `sudo` prefix needed
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg
+USER devuser
+WORKDIR /home/devuser/{project-dir}
 
-# Python deps — manifest before source so this layer is cached across source edits
-COPY --chown=${UID}:${GID} pyproject.toml ./
-RUN --mount=type=cache,target=/home/devuser/.cache/pip,uid=${UID},gid=${GID} \
-    pip install -e ".[dev]"
-
-COPY --chown=${UID}:${GID} . .
+# <Install project dependencies here with cache mounts>

@@ -1,5 +1,5 @@
 services:
-  efficientnet-cu128:
+  {service-name}:
     shm_size: '8gb'
     runtime: nvidia
     labels:
@@ -9,7 +9,10 @@ services:
         limits:
           memory: 14G
     build:
+      context: .
       dockerfile: Dockerfile
+      additional_contexts:
+        helpers: ..
       args:
         - UID=${UID:-1008}
         - GID=${GID:-1008}
@@ -20,7 +23,6 @@ services:
       - DEBIAN_FRONTEND=noninteractive
     volumes:
       - "~/volume:/home/devuser/volume"
-      - ".:/home/devuser/workspace"
-    working_dir: /home/devuser/workspace
-    # restart: always
+      - ".:/home/devuser/{project-dir}"
+    working_dir: /home/devuser/{project-dir}
     entrypoint: ["tail", "-f", "/dev/null"]

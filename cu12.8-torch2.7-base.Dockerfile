@@ -9,6 +9,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         build-essential \
         python3.10 \
         python3.10-dev \
+        python3.10-venv \
         python3-pip \
         sudo \
         git \
@@ -28,30 +29,14 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Project-writable venv at /opt/venv — base deps go here, projects extend it
+RUN python3.10 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:${PATH}"
+
 # Torch — pip cache mount keeps the wheel cache outside the image
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install \
+    pip install --upgrade pip setuptools wheel \
+ && pip install \
         torch==2.7.1 \
         torchvision==0.22.1 \
         --index-url https://download.pytorch.org/whl/cu128
-
-# Non-root devuser with passwordless sudo, matching host UID/GID (baked at base build)
-ARG UID=1008
-ARG GID=1008
-RUN groupadd -g ${GID} devuser \
- && useradd -m -u ${UID} -g ${GID} -s /bin/bash devuser \
- && echo "devuser ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/devuser \
- && chmod 0440 /etc/sudoers.d/devuser
-
-# Transparent sudo wrappers: `apt`, `apt-get`, `dpkg` run as root without explicit sudo
-RUN for c in apt apt-get dpkg; do \
-      printf '#!/bin/sh\nexec sudo /usr/bin/%s "$@"\n' "$c" > /usr/local/bin/$c \
-      && chmod +x /usr/local/bin/$c; \
-    done
-
-USER devuser
-ENV PATH=/home/devuser/.local/bin:${PATH}
-
-# Default pip to user installs so `pip install foo` always works without sudo
-RUN mkdir -p /home/devuser/.config/pip \
- && printf '[install]\nuser = true\n' > /home/devuser/.config/pip/pip.conf

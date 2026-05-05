@@ -52,7 +52,7 @@ Base images follow the naming convention shown above (e.g. `cu12.4-torch2.5-base
 
 **Create a new base only as a last resort** — model it on the Example base-image Dockerfile reference (or the closest existing one), adjust versions, keep the naming convention, and explain why no existing image fit. New base Dockerfiles live in CWD as `./{name}-base.Dockerfile`.
 
-Check if the chosen image is built (`docker image ls | grep {base_name}`); build it from CWD if not. When building, pass `--build-arg UID=$(id -u) --build-arg GID=$(id -g)` so the baked-in `devuser` matches the host user.
+Check if the chosen image is built (`docker image ls | grep {base_name}`); build it from CWD if not. The base has no user concept — it's a pure tooling layer — so no UID/GID build args are needed.
 
 ### 3 — Write the Dockerfile
 
@@ -61,12 +61,13 @@ Create `./{repo_name}/Dockerfile` modelled on the example project Dockerfile abo
 Before writing, read `./include.md` and ensure every package/CLI/library listed there is installed in the project Dockerfile (in addition to whatever the project itself needs). Use the appropriate install path: `apt`/`apt-get` for system libs, the language manager for CLI tools (e.g. `pip install`, `npm i -g`), and the documented installer for anything else. If something in `include.md` is already provided by the chosen base image, skip it.
 
 Key practices (non-obvious ones):
+- **Use the shared `setup-devuser.sh` helper.** All devuser/sudo-wrapper/venv-chown logic lives in `./setup-devuser.sh`. The project Dockerfile pulls it and invokes (see example project Dockerfile above).
+- **The base ships a Python venv at `/opt/venv` already on `PATH`.** The helper script chowns it to devuser, after which plain `pip install ...` lands inside the venv. Base + project packages share `/opt/venv`, which is on a system path so it survives home-dir volume mounts at runtime.
 - **Copy dependency manifests before source** so the install layer isn't invalidated by source changes.
 - Do **not** pass `--no-cache-dir` on project installs; reserve that flag for pushed base images.
 - Prefer runtime accelerator images over devel unless the project compiles native extensions inside the container at runtime.
-- Stay on `USER devuser` from the base. `apt`/`apt-get`/`dpkg` are wrapped to auto-sudo, and the language package manager preconfigured in the base (pip in the Python base) defaults to user-mode installs — neither needs an explicit `sudo` prefix or user/global flag.
-- Re-declare `ARG UID` / `ARG GID` and pass them to cache mounts (`uid=${UID},gid=${GID}`) and `COPY --chown=${UID}:${GID}` so devuser can write to caches and owns the source.
-- For non-Python stacks (npm, yarn, pnpm, cargo, go, …), see the cache-target table below; the rest of the conventions are unchanged.
+- Pass UID/GID to cache mounts (`uid=${UID},gid=${GID}`) and `COPY --chown=${UID}:${GID}` so devuser can write to caches and owns the source.
+- For non-Python stacks (npm, yarn, pnpm, cargo, go, …), the same `setup-devuser.sh` script is reusable — its venv chown is guarded, so non-Python projects just chown their own toolchain root in a follow-up `RUN` after invoking the script.
 
 ### 4 — Build and verify
 
@@ -91,13 +92,26 @@ Tell the user:
 
 ## Adapting to non-Python stacks
 
-The `devuser` / sudo-wrapper / UID-matching machinery in the base is language-agnostic. When creating a new base for a different stack (Node, Rust, Go, …), copy the closest existing base, swap **only** the toolchain install, and keep the user/sudo/wrapper block identical. In that base, configure the manager so its **default** install mode lands under `/home/devuser` (no sudo needed) — analogous to pip's `[install] user = true`.
+The pattern generalises: the **base** installs the toolchain at a system path (so it survives home-dir mounts) and puts that path on `PATH`; the **project** creates devuser, installs the sudo wrappers, and `chown`s the toolchain root so devuser can write to it.
 
-In project Dockerfiles, point the cache mount at the manager's cache dir:
+When creating a new base for a different stack (Node, Rust, Go, …), copy the closest existing base and swap **only** the toolchain install + the `PATH` line. The devuser/sudo-wrapper block stays in the project Dockerfile (identical across stacks) — only the `chown` target changes.
 
-| Manager | User-install setup (in base)            | Cache mount target                                                                   |
-| ------- | --------------------------------------- | ------------------------------------------------------------------------------------ |
-| pip     | `[install] user = true` in `pip.conf`   | `/home/devuser/.cache/pip`                                                           |
-| npm     | `npm config set prefix ~/.local`        | `/home/devuser/.npm`                                                                 |
-| yarn    | `yarn config set prefix ~/.local`       | `/home/devuser/.cache/yarn` (v1) or `/home/devuser/.yarn/berry/cache` (v2+)          |
-| pnpm    | `pnpm config set global-bin-dir ~/.local/bin` | `/home/devuser/.local/share/pnpm/store`                                        |
+**pip**
+- Base toolchain root: venv at `/opt/venv` (already on `PATH`).
+- Project chowns: `/opt/venv`.
+- Cache mount target: `/home/devuser/.cache/pip`.
+
+**npm**
+- Base toolchain root: `/opt/npm-global`, set via `npm config set prefix /opt/npm-global -g`; add `/opt/npm-global/bin` to `PATH`.
+- Project chowns: `/opt/npm-global`.
+- Cache mount target: `/home/devuser/.npm`.
+
+**yarn**
+- Base toolchain root: `/opt/yarn-global`, set via `yarn config set prefix /opt/yarn-global`; add `/opt/yarn-global/bin` to `PATH`.
+- Project chowns: `/opt/yarn-global`.
+- Cache mount target: `/home/devuser/.cache/yarn` (v1) or `/home/devuser/.yarn/berry/cache` (v2+).
+
+**pnpm**
+- Base toolchain root: `/opt/pnpm-global`, set via `pnpm config set global-bin-dir /opt/pnpm-global/bin`; add `/opt/pnpm-global/bin` to `PATH`.
+- Project chowns: `/opt/pnpm-global`.
+- Cache mount target: `/home/devuser/.local/share/pnpm/store`.
