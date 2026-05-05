@@ -1,0 +1,26 @@
+services:
+  efficientnet-cu128:
+    shm_size: '8gb'
+    runtime: nvidia
+    labels:
+      - "role=development"
+    deploy:
+      resources:
+        limits:
+          memory: 14G
+    build:
+      dockerfile: Dockerfile
+      args:
+        - UID=${UID:-1008}
+        - GID=${GID:-1008}
+    cap_add:
+      - NET_ADMIN
+    env_file: ~/supervisely.env
+    environment:
+      - DEBIAN_FRONTEND=noninteractive
+    volumes:
+      - "~/volume:/home/devuser/volume"
+      - ".:/home/devuser/workspace"
+    working_dir: /home/devuser/workspace
+    # restart: always
+    entrypoint: ["tail", "-f", "/dev/null"]

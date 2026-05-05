@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//home/max_eliseev/projects/**)",
+      "WebSearch",
+      "WebFetch"
+    ]
+  }
+}

@@ -1,0 +1,5 @@
+- Claude Code CLI: `curl -fsSL https://claude.ai/install.sh | bash`
+- Codex CLI: `npm i -g @openai/codex`
+- python3.10 (make alias `python` to python3.10)
+- ffmpeg
+- opencv and dependencies: libgl1, libglib2.0-0, libsm6, libxext6, libxrender-dev, libmagic-dev, libexiv2-dev, libgomp1
