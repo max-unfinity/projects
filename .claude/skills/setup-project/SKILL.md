@@ -89,7 +89,7 @@ Copy most of the fields from the example docker-compose above (no `extends`). Ad
 
 ### 6 — Run
 
-Start the container with docker compose.
+Start the container with docker compose. Check imports of key libraries or script execution to verify the environment is set up correctly.
 
 ### 7 — Report
 

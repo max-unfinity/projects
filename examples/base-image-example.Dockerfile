@@ -1,5 +1,6 @@
 FROM <base-image>
 
+ENV TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0 12.0+PTX"
 ENV DEBIAN_FRONTEND=noninteractive
 
 # System deps
@@ -22,5 +23,5 @@ ENV PATH="/opt/venv/bin:${PATH}"
 
 # Toolchain example: base Python deps with pip cache mount
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --upgrade pip setuptools wheel \
+    pip install --upgrade setuptools==80.10.2 wheel \
  && pip install torch==2.7.1 torchvision==0.22.1 --index-url https://download.pytorch.org/whl/cu128

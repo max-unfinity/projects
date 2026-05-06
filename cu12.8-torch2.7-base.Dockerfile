@@ -35,8 +35,11 @@ ENV PATH="/opt/venv/bin:${PATH}"
 
 # Torch — pip cache mount keeps the wheel cache outside the image
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --upgrade pip setuptools wheel \
+    pip install --upgrade setuptools==80.10.2 wheel \
  && pip install \
         torch==2.7.1 \
         torchvision==0.22.1 \
-        --index-url https://download.pytorch.org/whl/cu128
+        --index-url https://download.pytorch.org/whl/cu128 \
+   && du -sh /root/.cache/pip /root/.cache/pip/http* 2>/dev/null || true
+
+ENV TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0 12.0+PTX"
