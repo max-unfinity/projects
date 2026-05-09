@@ -1,6 +1,6 @@
 ---
-name: manage-skills
-description: Create, modify, or remove a Claude Code skill. Use when the user asks to add a new skill, update an existing skill, or delete one.
+name: skill-manager
+description: Create, modify, or remove a Claude Code skill, use when the user asks to work with your skills.
 disable-model-invocation: true
 allowed-tools: Bash Read Write Edit
 argument-hint: <create|modify|remove> [skill-name]
@@ -17,12 +17,12 @@ Default to project scope unless the user says otherwise. Each skill is a directo
 
 ## Frontmatter — non-obvious fields
 
-- **`description`** — the only part loaded every session; drives auto-invocation. Front-load the trigger case. Use natural-language phrases the user would actually type. Combined with `when_to_use`, capped at 1,536 chars in the index.
-- **`when_to_use`** — extra trigger phrases, appended to `description`.
+- **`description`** — the only part loaded every session; drives auto-invocation. Front-load the trigger case. Use natural-language phrases the user would actually type. Combined with `when_to_use`, capped at 1,536 chars in the index. **Keep it short — 1–2 sentences max.**
+- **`when_to_use`** — extra trigger phrases, appended to `description`. **Omit unless the user explicitly asks for it.**
 - **`disable-model-invocation: true`** — prevents Claude from auto-triggering.
 - **`user-invocable: false`** — hides from `/` menu; Claude-only background knowledge. Skip this by default.
 - **`allowed-tools`** — pre-approves tools for this skill's scope so Claude doesn't pause mid-task.
-- **`context: fork`** — add it when the skill can be run in isolation by a spawned subagent. It won’t have access to your conversation history, which reduces costs and context noise. Suggest this for skills that can be framed as standalone tasks.
+- **`context: fork`** — add it when the skill can be run in isolation by a spawned subagent. It won't have access to your conversation history, which reduces costs and context noise. Suggest this for skills that can be framed as standalone tasks.
 - **`argument-hint`** — shown in autocomplete for a user; e.g. `[issue-number]`.
 - **`effort`** — override reasoning depth. Options: `low`, `medium`, `high`, `xhigh`, `max`. Suggest an effort level for the user. Suggest `xhigh` or `max` for tasks that involves many steps, intelligent decisions, long-horizon planning; suggest `low` for simple mechanical tasks without need for thinking. Skip if unsure.
 - **`model`** — override model for this skill. Options: `opus`, `sonnet`, `haiku`. Suggest `opus` for complex tasks with intelligent decision-making; `sonnet` for most tasks; `haiku` for simple tasks. Skip if unsure.
