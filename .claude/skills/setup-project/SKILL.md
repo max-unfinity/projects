@@ -69,6 +69,9 @@ Ensure every package/CLI/library from the "Additional user packages/libs" list a
 Key practices (non-obvious ones):
 - **Use the shared `setup-devuser.sh` helper.** All devuser/sudo-wrapper/venv-chown logic lives in `./setup-devuser.sh`. The project Dockerfile pulls it and invokes (see example project Dockerfile above).
 - **The base ships a Python venv at `/opt/venv` already on `PATH`.** The helper script chowns it to devuser, after which plain `pip install ...` lands inside the venv. Base + project packages share `/opt/venv`, which is on a system path so it survives home-dir volume mounts at runtime.
+- **Pull host auth state from the `home` build context** (see example) so claude/codex auto-login as the host user. Sync-needed paths (`~/.claude/skills`, `~/mcp-servers`, `~/.tmux.conf`, `~/.secrets`) are bind-mounted at runtime — do not COPY them.
+- **Always end the Dockerfile with `COPY --chown=${UID}:${GID} . .`** (after dependency install) so the image runs standalone and `pip install -e .` registers against a real tree. The runtime volume mount overlays this for live-edit.
+- **Do NOT compile native extensions in the Dockerfile.** Defer `build_ext --inplace`/CMake/etc. to step 6 — the runtime volume mount hides anything emitted into the project tree at build time.
 - **Copy dependency manifests before source** so the install layer isn't invalidated by source changes.
 - Do **not** pass `--no-cache-dir` on project installs; reserve that flag for pushed base images.
 - Prefer runtime accelerator images over devel unless the project compiles native extensions inside the container at runtime.
@@ -81,16 +84,22 @@ Build the image. Fix any errors and retry until the build succeeds.
 
 ### 5 — Write docker-compose.yml
 
-Copy most of the fields from the example docker-compose above (no `extends`). Adjust:
+Copy most of the fields from the example docker-compose above (no `extends`). The example already wires `additional_contexts.home` and the host-overlay bind mounts — keep those verbatim. Adjust:
 - **service name / `image`**: `{repo_name}` / `{repo_name}:dev`
 - **`build.context`**: `.`, **`build.dockerfile`**: `Dockerfile`
 - **`entrypoint`**: `["tail", "-f", "/dev/null"]` — keep this dev default
 - everything else as needed based on the project.
 
-### 6 — Run
+### 6 — Run and compile native extensions
 
-Start the container with docker compose. Check imports of key libraries or script execution to verify the environment is set up correctly.
+`docker compose up -d`, then verify imports of key libraries.
 
-### 7 — Report
+If the project has native extensions (C/C++/CUDA — check for `setup.py` with `Extension`/`CUDAExtension`, `pyproject.toml` with `cibuildwheel`/`scikit-build`, or `CMakeLists.txt`), compile them now via `docker compose exec`. Because the project dir is volume-mounted, the resulting `.so` files land on the host and survive container rebuilds.
+
+### 7 — Start claude in the container
+
+Run `./setup-claude-in-container.sh {repo_name}-{repo_name}-1` (or pass the actual container name) to spin up a tmux session with `claude --dangerously-skip-permissions --remote-control` inside the container, reusing the host login. The script's keystroke walk-through matches `~/.claude/skills/start-claude/SKILL.md`.
+
+### 8 — Report
 
 Briefly summarise your work and report any issues you encountered. If you had to create a new base image, explain why.

@@ -13,6 +13,7 @@ services:
       dockerfile: Dockerfile
       additional_contexts:
         helpers: ..
+        home: ${HOME}
       args:
         - UID=${UID:-1008}
         - GID=${GID:-1008}
@@ -24,5 +25,10 @@ services:
     volumes:
       - "~/volume:/home/devuser/volume"
       - ".:/home/devuser/{project-dir}"
+      - "~/.claude/skills:/home/devuser/.claude/skills"
+      - "~/.mcp.json:/home/devuser/.mcp.json"
+      - "~/mcp-servers:/home/devuser/mcp-servers"
+      - "~/.tmux.conf:/home/devuser/.tmux.conf:ro"
+      - "~/.secrets:/home/devuser/.secrets"
     working_dir: /home/devuser/{project-dir}
     entrypoint: ["tail", "-f", "/dev/null"]

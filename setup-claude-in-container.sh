@@ -1,15 +1,6 @@
 #!/bin/sh
-# Set up `claude` in a detached tmux session inside a running dev container,
-# reusing the host user's Claude Code login + settings.
-#
-# Usage: setup-claude-in-container.sh <container> [tmux-session-name]
-#   container         docker container name (e.g. dam4sam-dam4sam-1)
-#   tmux-session-name optional, defaults to "claude"
-#
-# Prereqs:
-#   - host is already logged in to Claude Code (~/.claude.json exists)
-#   - container has a `devuser` with passwordless sudo (setup-devuser.sh layout)
-#   - container has `claude` on PATH (e.g. installed via claude.ai/install.sh)
+# Start claude in a detached tmux session inside a dev container.
+# Usage: setup-claude-in-container.sh <container> [session-name]
 set -eu
 
 CONTAINER="${1:?container name required}"
@@ -24,6 +15,7 @@ HOST_CREDS="$HOME/.claude/.credentials.json"
 docker exec "$CONTAINER" sh -c 'command -v tmux >/dev/null 2>&1' || \
     docker exec "$CONTAINER" sh -c 'sudo apt-get update -qq && sudo apt-get install -y -qq tmux'
 
+# Refresh auth state (host may have re-logged in since image build).
 docker exec "$CONTAINER" sh -c 'mkdir -p ~/.claude'
 docker cp "$HOST_CLAUDE_JSON" "$CONTAINER:/home/devuser/.claude.json"
 docker cp "$HOST_CREDS"       "$CONTAINER:/home/devuser/.claude/.credentials.json"
@@ -33,14 +25,11 @@ docker exec "$CONTAINER" sh -c "tmux kill-session -t $SESSION 2>/dev/null || tru
 docker exec "$CONTAINER" bash -lc \
     "tmux new-session -d -s $SESSION 'claude --verbose --remote-control \"$CONTAINER\" --dangerously-skip-permissions'"
 
-# Walk the first-run prompts: trust folder (Enter) → accept bypass (Down, Enter).
-sleep 3
-docker exec "$CONTAINER" tmux send-keys -t "$SESSION" Enter
+# Walk first-run prompts (matches start-claude skill).
 sleep 2
-docker exec "$CONTAINER" tmux send-keys -t "$SESSION" Down
-sleep 1
 docker exec "$CONTAINER" tmux send-keys -t "$SESSION" Enter
-sleep 3
+sleep 1
+docker exec "$CONTAINER" tmux send-keys -t "$SESSION" Down Enter
 
 echo "claude tmux session '$SESSION' started in $CONTAINER"
 echo "attach:  docker exec -it $CONTAINER bash -lc 'tmux attach -t $SESSION'"
