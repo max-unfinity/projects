@@ -3,8 +3,8 @@ name: setup-project
 description: Set up a 3rd-party GitHub project for local development.
 argument-hint: <github-url-or-repo-name>
 disable-model-invocation: true
-model: opus
-effort: xhigh
+model: claude-opus-4-6
+effort: high
 allowed-tools: Bash Read Write Edit WebFetch WebSearch Grep Glob
 ---
 
