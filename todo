@@ -1,8 +1,7 @@
-fix overwriting volumes
-fix that Dockerfiles and composes will be wasted cuz they located in project dirs.
-configure sharing agnet config files across all containers (via volumes:read/write)
-how to add MCPs in containers (can we also share .claude.json?), or via .mcp.json?
-how to be with MCPs secrets?
+- run claude in /home/devuser (not in project dir)
+- fix that Dockerfiles and composes will be wasted cuz they located in project dirs.
+- how to add MCPs in containers (can we also share .claude.json?), or via .mcp.json?
+- how to be with MCPs secrets?
 
 .claude.json?
 .secrets + export them into env
