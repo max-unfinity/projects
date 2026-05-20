@@ -30,5 +30,5 @@ services:
       - "~/mcp-servers:/home/devuser/mcp-servers"
       - "~/.tmux.conf:/home/devuser/.tmux.conf:ro"
       - "~/.secrets:/home/devuser/.secrets"
-    working_dir: /home/devuser/{project-dir}
+    working_dir: /home/devuser
     entrypoint: ["tail", "-f", "/dev/null"]

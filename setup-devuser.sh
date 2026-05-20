@@ -22,5 +22,5 @@ done
 # for non-Python bases that don't ship /opt/venv — they should chown their own
 # toolchain root after invoking this script.
 if [ -d /opt/venv ]; then
-  chown -R "$DEV_UID:$DEV_GID" /opt/venv
+  find /opt/venv -type d -exec chown "$DEV_UID:$DEV_GID" {} +
 fi

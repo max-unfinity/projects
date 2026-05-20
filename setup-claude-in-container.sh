@@ -22,14 +22,16 @@ docker cp "$HOST_CREDS"       "$CONTAINER:/home/devuser/.claude/.credentials.jso
 docker exec "$CONTAINER" sh -c 'chmod 600 ~/.claude.json ~/.claude/.credentials.json'
 
 docker exec "$CONTAINER" sh -c "tmux kill-session -t $SESSION 2>/dev/null || true"
-docker exec "$CONTAINER" bash -lc \
+docker exec -w /home/devuser "$CONTAINER" bash -lc \
     "tmux new-session -d -s $SESSION 'claude --verbose --remote-control \"$CONTAINER\" --dangerously-skip-permissions'"
 
 # Walk first-run prompts (matches start-claude skill).
 sleep 2
 docker exec "$CONTAINER" tmux send-keys -t "$SESSION" Enter
 sleep 1
-docker exec "$CONTAINER" tmux send-keys -t "$SESSION" Down Enter
+docker exec "$CONTAINER" tmux send-keys -t "$SESSION" Down
+sleep 1
+docker exec "$CONTAINER" tmux send-keys -t "$SESSION" Enter
 
 echo "claude tmux session '$SESSION' started in $CONTAINER"
 echo "attach:  docker exec -it $CONTAINER bash -lc 'tmux attach -t $SESSION'"
