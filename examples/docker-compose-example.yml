@@ -7,7 +7,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 14G
+          memory: 24G
     build:
       context: .
       dockerfile: Dockerfile
@@ -28,7 +28,7 @@ services:
       - "~/.claude/skills:/home/devuser/.claude/skills"
       - "~/.mcp.json:/home/devuser/.mcp.json"
       - "~/mcp-servers:/home/devuser/mcp-servers"
-      - "~/.tmux.conf:/home/devuser/.tmux.conf:ro"
+      - "~/.tmux.conf:/home/devuser/.tmux.conf"
       - "~/.secrets:/home/devuser/.secrets"
-    working_dir: /home/devuser
+    working_dir: /home/devuser/{project-dir}
     entrypoint: ["tail", "-f", "/dev/null"]
